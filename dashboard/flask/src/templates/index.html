@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+<main>
+    <h1>{{ global_vars.brand }} Control Panel</h1>
+    {% if session_info %}
+    <span>Logged in as {{ session_info.sub }}</span> <a class="navbar-brand" href="/logout"><button>Logout <div class="famfamfam-silk icon-door_out"></div></button></a>
+    {% else %}
+    <a class="navbar-brand" href="/login"><button>Login <div class="famfamfam-silk icon-door_in"></div></button></a><span> to access full control panel</span>
+    {% endif %}
+</main>
+
+{% endblock %}

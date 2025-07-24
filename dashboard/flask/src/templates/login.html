@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+<main>
+    <h1>Login to {{ global_vars.brand }}</h1>
+
+    {% if err %}
+    <div class="notif-box error-colors">
+        <span>
+        {% if err == "incorrect" %}
+            Password or username incorrect
+        {% endif %}
+        </span>
+    </div>
+    {% endif %}
+
+    <form action="/api/v1/login" method="post">
+        <label for="username">Username</label>
+        <input type="text" placeholder="admin" name="username" required>
+
+        <label for="password">Password</label>
+        <input type="password" placeholder="brain!" name="password" required>
+
+        <div class="form-button-container">
+        <button type="submit">Login <div class="famfamfam-silk icon-door_in"></div></button>
+        <a href="/" class="button">Cancel <div class="famfamfam-silk icon-cancel"></div></a>
+        </div>
+    </form>
+</main>
+
+{% endblock %}
