@@ -1,11 +1,35 @@
 #!/bin/python3
-print("Testing dependencies...")
+import os
+import subprocess
+import json
+import datetime
+import pika
+import requests
+import time
+
+logfile = open("vision.log", "a")
+
+def log(line, level=1):
+    dts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S %z")
+    ll = "INFO"
+    if level>1:
+        ll = "WARN"
+    if level>2:
+        ll = "ERR "
+    if level>3:
+        ll = "CRIT"
+
+    print("[" + dts + "] [" + ll + "] " + line, file=logfile) # The Nvidia container runtime sometimes fails to print output (!) so we log to an internal file
+    logfile.flush()
+
+
+log("Testing dependencies...")
 
 def print_elem_ok(elem, ok):
     emo = "x"
     if ok:
         emo = u"\u2713"
-    print(emo + " " + elem)
+    log(emo + " " + elem)
 
 
 from PIL import Image, ImageDraw
@@ -15,29 +39,84 @@ print_elem_ok("PyTorch CUDA support", torch.cuda.is_available())
 import torchvision
 print_elem_ok("Torchvision loaded", True)
 import cv2
+print_elem_ok("OpenCV loaded", True)
 from ultralytics import YOLO
 print_elem_ok("Ultralytics YOLO loaded", True)
+#proc = subprocess.Popen(["mount", "-t", "nfs", os.environ.get("NFS_CAMERA_MOUNT", "192.168.1.1:/srv/nfs_cam"), "/mnt/nfs_cam"])
+#proc.wait()
+#print_elem_ok("Mounted NFS camera feed", True)
 
 #print("Starting inference server") -- this will be a server at some point!
 
+model = None
 
-print("Loading YOLO model...")
-model = YOLO("yolo11n_fish_trained.pt") # https://huggingface.co/akridge/yolo8-fish-detector-grayscale
-print("Initialising YOLO model...")
-results = model("00008.jpg")
-print("Running test...")
-results = model("00099.jpg")
-print("Plotting boxes...")
-img = Image.open("00099.jpg")
-imd = ImageDraw.Draw(img)  
+def set_new_model(modelname):
+    model = None
+    log("Downloading " + modelname + "...")
+    url = "http://brain-dashboard:8080/api/v1/models/" + modelname
+    response = requests.get(url)
+    with open("cmodel.pt", mode="wb") as fh:
+        fh.write(response.content)
+    log("Loading YOLO model...")
+    model = YOLO("cmodel.pt")
+    log("Initialising YOLO model...")
+    dummy_image = Image.new('RGB', (64, 64))
+    results = model(dummy_image)
+    print_elem_ok("New model " + modelname + " loaded", True)
 
-for r in results:
-	boxes = r.boxes
-	for box in boxes:
-		raw_shape = box.xyxy.cpu().detach().numpy()
-		shape = raw_shape.tolist()[0]
-		print(shape)
-		imd.rectangle(shape, fill = None, outline = "red")
+def infer_frame(frame):
+    if model is not None:
+        results = model(frame)
+        log("Plotting boxes...")
+        img = frame.copy()
+        imd = ImageDraw.Draw(img)
+        for r in results:
+            boxes = r.boxes
+            for box in boxes:
+                raw_shape = box.xyxy.cpu().detach().numpy()
+                shape = raw_shape.tolist()[0]
+                log(shape)
+                imd.rectangle(shape, fill = None, outline = "red")
+        return img
+    else:
+        return None
 
-img.save("/app/out/00099_labelled.jpg")
-print("Image ready!")
+def main():
+    rabbitmq_credentials = pika.PlainCredentials(os.environ.get("RABBITMQ_DEFAULT_USER", "brain"), os.environ.get("RABBITMQ_DEFAULT_PASS", "brain!"))
+    rabbitmq_host = os.environ.get("RABBITMQ_HOST", "localhost")
+    rabbitmq_port = os.environ.get("RABBITMQ_PORT", 5672)
+    log("Connecting to RabbitMQ server at " + str(rabbitmq_host) + ":" + str(int(rabbitmq_port)))
+    connection = pika.BlockingConnection(pika.ConnectionParameters(rabbitmq_host, int(rabbitmq_port), "/", rabbitmq_credentials, heartbeat=600, blocked_connection_timeout=300))
+
+    channel = connection.channel()
+    channel.queue_declare(queue="brain_vision_cmd")
+
+    def callback(ch, method, properties, body):
+        body_object = json.loads(body.decode("utf-8"))
+        log("CMD => " + json.dumps(body_object))
+        if body_object["cmd"] == "set_model":
+            set_new_model(body_object["file"])
+
+    channel.basic_consume(queue="brain_vision_cmd", auto_ack=True, on_message_callback=callback)
+
+    print_elem_ok("Vision worker ready for jobs", True)
+    channel.start_consuming()
+
+
+try:
+    while True:
+        try:
+            main()
+        except pika.exceptions.IncompatibleProtocolError:
+            log("RabbitMQ protocol error - Has the server fully booted?", 2)
+        except pika.exceptions.AMQPConnectionError:
+            log("Could not connect to RabbitMQ", 3)
+        except pika.exceptions.ConnectionClosedByBroker:
+            log("RabbitMQ connection lost", 4)
+        time.sleep(1)
+except KeyboardInterrupt:
+    log('Interrupted')
+    try:
+        sys.exit(0)
+    except SystemExit:
+        os._exit(0)

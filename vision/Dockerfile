@@ -1,4 +1,6 @@
 FROM nvcr.io/nvidia/l4t-pytorch:r35.2.1-pth2.0-py3
+#nvcr.io/nvidia/l4t-cuda:12.2.12-devel
+#nvcr.io/nvidia/l4t-jetpack:r36.4.0
 WORKDIR /app
 SHELL ["/bin/bash", "-c"]
 #RUN apt-get -y install opencv-python
@@ -7,9 +9,10 @@ RUN apt-get install --no-install-recommends -y gcc git zip curl htop libgl1-mesa
 RUN apt-get install --reinstall libgstreamer1.0-0
 RUN mkdir -p /usr/src/ultralytics
 RUN python3 -m pip install --upgrade pip wheel
-RUN pip install --no-cache uwsgi flask tqdm matplotlib pyyaml psutil thop pandas hydra torch torchvision python-multipart "numpy==1.23"
+RUN pip install --no-cache pika uwsgi flask tqdm matplotlib pyyaml psutil thop pandas hydra torch torchvision python-multipart "numpy==1.23"
 RUN pip install --no-cache ultralytics --no-deps
 RUN mkdir /app/yolo_conf
+RUN mkdir /mnt/nfs_cam
 ENV YOLO_CONFIG_DIR="/app/yolo_conf"
 COPY src /app
 WORKDIR /app

@@ -11,6 +11,34 @@
     {% else %}
     <a class="navbar-brand" href="/login"><button>Login <div class="famfamfam-silk icon-door_in"></div></button></a><span> to access full control panel</span>
     {% endif %}
+
+    {% if session_info %}
+    <h2>System settings</h2>
+
+    <h3>Set the active vision model</h3>
+
+    <form action="/api/v1/set_vision_model" method="post">
+        <label for="model">Vision model</label>
+        <select name="model">
+            {% for mn in local_vars.available_models %}
+            <option value="{{ mn }}">{{ mn }}</option>
+            {% endfor %}
+        </select><br />
+
+        <button type="submit">Set vision model <div class="famfamfam-silk icon-bricks"></div></button>
+    </form>
+
+    <h3>Upload a new vision model</h3>
+
+    <form action="/api/v1/upload_model" method="post" enctype="multipart/form-data">
+        <label for="file">YOLO v11 (or lower) model file (.pt)</label>
+        <input type="file" name="file" required /><br/>
+
+        <!-- <button type="submit">Login <div class="famfamfam-silk icon-computer_go"></div></button> -->
+
+        <button type="submit">Upload <div class="famfamfam-silk icon-page_white_get"></div></button>
+    </form>
+    {% endif %}
 </main>
 
 {% endblock %}

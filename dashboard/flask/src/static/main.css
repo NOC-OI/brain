@@ -60,6 +60,18 @@ input[type=password] {
     margin-bottom: 0.8rem;
 }
 
+select {
+    background-color: #ffffff;
+    border-radius: 0;
+    border: 1px solid #000000;
+    padding: 0.25rem 0.5rem 0.25rem 0.5rem;
+    color: #000000;
+    text-decoration: none;
+    width: 20rem;
+    max-width: 100%;
+    margin-bottom: 0.8rem;
+}
+
 input[type=submit] {
     background-color: #ccddee;
     border-radius: 0;
@@ -71,6 +83,31 @@ input[type=submit] {
     cursor: pointer;
     white-space: nowrap;
 }
+
+input[type=file] {
+    background-color: #ffffff;
+    border-radius: 0;
+    border: 1px solid #000000;
+    color: #000000;
+    text-decoration: none;
+    width: 20rem;
+    max-width: 100%;
+    margin-bottom: 0.8rem;
+}
+
+input[type=file]::file-selector-button {
+    background-color: #ccddee;
+    border-radius: 0;
+    border: 1px solid #000000;
+    margin: -1px 0.25rem -1px -1px;
+    padding: 0.25rem 0.5rem 0.25rem 0.5rem;
+    color: #000000;
+    font-size: 0.8rem;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
 
 button {
     background-color: #ccddee;
@@ -94,4 +131,11 @@ button {
     text-decoration: none;
     cursor: pointer;
     white-space: nowrap;
+}
+
+.spacer {
+    display: inline-block;
+    width: 100%;
+    position: relative;
+    height: 1rem;
 }

@@ -6,11 +6,15 @@ from flask import request
 import random
 import string
 import secrets
+import pika
 import json
 import jwt
 import hashlib
 
 jwt_secret = os.environ.get("JWT_SECRET", None)
+rabbitmq_credentials = pika.PlainCredentials(os.environ.get("RABBITMQ_DEFAULT_USER", "brain"), os.environ.get("RABBITMQ_DEFAULT_PASS", "brain!"))
+rabbitmq_host = os.environ.get("RABBITMQ_HOST", "localhost")
+rabbitmq_port = os.environ.get("RABBITMQ_PORT", 5672)
 
 passwords = {}
 
@@ -27,7 +31,7 @@ if jwt_secret is None:
     print("[WARNING] JWT_SECRET environment variable not set, using default \"deadbeef\". This is unsafe!")
     jwt_secret = "deadbeef"
 frontend_globals = {
-        "brand": "BRAIN"
+        "brand": os.environ.get("MANAGEMENT_PANEL_BRANDING", "undefined")
     }
 
 def check_password(username, password):
@@ -65,4 +69,17 @@ def get_session_info():
     if raw_jwt is None:
         return None
     else:
-        return jwt.decode(raw_jwt, jwt_secret, algorithms=["HS256"])
+        try:
+            return jwt.decode(raw_jwt, jwt_secret, algorithms=["HS256"])
+        except jwt.exceptions.InvalidSignatureError:
+            return None
+
+def publish_message(module = "all", body = None):
+    queue = "brain_" + module + "_cmd"
+    body = json.dumps(body)
+    print(body + " => " + queue)
+    connection = pika.BlockingConnection(pika.ConnectionParameters(rabbitmq_host, rabbitmq_port, "/", rabbitmq_credentials))
+    channel = connection.channel()
+    channel.queue_declare(queue=queue)
+    channel.basic_publish(exchange="", routing_key=queue, body=body)
+    connection.close()

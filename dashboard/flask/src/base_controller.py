@@ -1,10 +1,12 @@
-from flask import Blueprint, request, render_template, Response, make_response, send_file, redirect
+from flask import Blueprint, request, render_template, Response, make_response, send_file, redirect, current_app, send_from_directory
 import uuid
 import requests
 import datetime
 import json
+import os
 
-from utils import get_session_info, get_app_frontend_globals, check_password, session_data_to_jwt
+from werkzeug.utils import secure_filename
+from utils import get_session_info, get_app_frontend_globals, check_password, session_data_to_jwt, publish_message
 
 base_pages = Blueprint("base_pages", __name__)
 base_api = Blueprint("base_api", __name__)
@@ -45,3 +47,30 @@ def page_login():
         return response
     else:
         return redirect("/login?err=incorrect", code=302)
+
+@base_api.route("/api/v1/upload_model", methods=['POST'])
+def api_upload_model():
+    if 'file' not in request.files:
+        return {"error": "No file uploaded"}
+    file = request.files['file']
+    if file.filename == '':
+        return {"error": "No file selected"}
+    if file:
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+        print("Uploaded file!")
+        return redirect("/")
+
+@base_api.route("/api/v1/set_vision_model", methods=['POST'])
+def api_set_vision_model():
+    body = {
+            "cmd": "set_model",
+            "file": request.form.get("model")
+        }
+    publish_message("vision", body)
+    return {"status": "ok"}
+
+@base_api.route("/api/v1/models/<filename>", methods=['GET'])
+def api_get_model(filename):
+    filename = secure_filename(filename)
+    return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)

@@ -1,0 +1,66 @@
+services:
+  nginx:
+    image: nginx:1.25.4
+    container_name: brain-nginx
+    depends_on:
+      - dashboard
+    env_file:
+      - ./.env
+    ports:
+      - ${MANAGEMENT_EXTERNAL_PORT}:80
+    networks:
+      - private
+      - public
+    volumes:
+      - ./templates/nginx.conf:/etc/nginx/conf.d/revproxy.conf
+
+  dashboard:
+    image: brain/dashboard
+    container_name: brain-dashboard
+    depends_on:
+      - rabbitmq
+    entrypoint: ["gunicorn", "-w", "${GUNICORN_WORKERS}", "main:app", "-b", "0.0.0.0:8080"]
+    env_file:
+      - ./.env
+    networks:
+      - private
+
+  vision:
+    image: brain/vision
+    container_name: brain-vision
+    runtime: nvidia
+    entrypoint: ["python3", "init.py"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    env_file:
+      - ./.env
+    networks:
+      - private
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: brain-rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    ports:
+      - 5672:5672
+    env_file:
+      - ./.env
+    command: ["bash", "-c", "chmod 400 /var/lib/rabbitmq/.erlang.cookie; rabbitmq-server"]
+    networks:
+      - private
+    
+networks:
+  public:
+    external: true
+    driver: bridge
+  private:
+    external: false
