@@ -31,6 +31,21 @@ def print_elem_ok(elem, ok):
         emo = u"\u2713"
     log(emo + " " + elem)
 
+remote_dashboard = "http://brain-dashboard:8080"
+status_msg = {"status": "booting"}
+
+def update_status():
+    for i in range(5): # Try 5 times, then give up
+        try:
+            url = remote_dashboard + "/api/v1/status"
+            payload = json.dumps(status_msg)
+            ret = requests.post(url, headers={"Authorization": "Bearer {}".format(os.environ.get("MANAGEMENT_PUSH_SECRET", "brain!")), "Content-type": "application/json"}, data=payload)
+            log("Status update success: " + ret.content.decode("utf-8"))
+            break
+        except Exception:
+            time.sleep(1)
+
+update_status()
 
 from PIL import Image, ImageDraw
 print_elem_ok("Standard dependencies loaded", True)
@@ -52,8 +67,12 @@ model = None
 
 def set_new_model(modelname):
     model = None
+    status_msg["status"] = "busy"
+    status_msg["accepting_inference"] = False
+    status_msg["model_loaded"] = None
+    update_status()
     log("Downloading " + modelname + "...")
-    url = "http://brain-dashboard:8080/api/v1/models/" + modelname
+    url = remote_dashboard + "/api/v1/models/" + modelname
     response = requests.get(url)
     with open("cmodel.pt", mode="wb") as fh:
         fh.write(response.content)
@@ -62,6 +81,10 @@ def set_new_model(modelname):
     log("Initialising YOLO model...")
     dummy_image = Image.new('RGB', (64, 64))
     results = model(dummy_image)
+    status_msg["status"] = "ok"
+    status_msg["accepting_inference"] = True
+    status_msg["model_loaded"] = modelname
+    update_status()
     print_elem_ok("New model " + modelname + " loaded", True)
 
 def infer_frame(frame):
@@ -100,6 +123,12 @@ def main():
     channel.basic_consume(queue="brain_vision_cmd", auto_ack=True, on_message_callback=callback)
 
     print_elem_ok("Vision worker ready for jobs", True)
+
+    status_msg["status"] = "ok"
+    status_msg["accepting_inference"] = False
+    status_msg["model_loaded"] = None
+    update_status()
+
     channel.start_consuming()
 
 

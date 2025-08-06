@@ -61,6 +61,42 @@ def api_upload_model():
         print("Uploaded file!")
         return redirect("/")
 
+@base_api.route("/api/v1/status", methods=['GET'])
+def api_get_status():
+    status_msg = {"status": "error"}
+    for i in range(5):
+        try:
+            with open("status.json", "r") as file:
+                status_msg = json.loads(file.read())
+            break
+        except IOError:
+            time.sleep(1)
+    return status_msg
+
+@base_api.route("/api/v1/status", methods=['POST'])
+def api_set_status():
+    #if current_app.config["PUSH_SECRET"] == :
+    status_msg = request.get_json()
+    auth_header = request.headers.get("Authorization")
+    if auth_header is not None:
+        auth_header_components = auth_header.split(" ")
+        if len(auth_header_components) > 1:
+            if auth_header_components[0].lower() == "bearer":
+                raw_token = auth_header_components[1]
+                if raw_token == current_app.config["PUSH_SECRET"]:
+                    for i in range(5):
+                        try:
+                            with open("status.json", "w") as file:
+                                file.write(json.dumps(status_msg))
+                            break
+                        except IOError:
+                            time.sleep(1)
+                    return {"status": "ok"}
+
+        return {"status": "error", "msg": "Authorization header invalid"}, 403
+
+    return {"status": "error", "msg": "Authorization header missing"}, 401
+
 @base_api.route("/api/v1/set_vision_model", methods=['POST'])
 def api_set_vision_model():
     body = {

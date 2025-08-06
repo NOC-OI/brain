@@ -6,6 +6,55 @@
 
 <main>
     <h1>{{ global_vars.brand }} Control Panel</h1>
+
+    <h2>Status: <span id="status_headline">javascript disabled :(</span></h2>
+    <dl id="status_box"></dl>
+
+    <script>
+document.getElementById("status_headline").innerText = "unknown";
+
+let currentStatus = {}
+
+let fetchStatus = () => {
+    var xhr = new XMLHttpRequest();
+    xhr.onload = () => {
+        currentStatus = JSON.parse(xhr.responseText);
+        document.getElementById("status_headline").innerText = currentStatus["status"];
+        if (currentStatus["status"] == "ok") {
+            document.getElementById("status_box").innerHTML = "";
+            let dt = document.createElement("dt");
+            let dd = document.createElement("dd");
+            dt.innerText = "Model loaded";
+            dd.innerText = currentStatus["model_loaded"];
+            if (currentStatus["model_loaded"] == null) {
+                dd.innerText = "null";
+            }
+            document.getElementById("status_box").append(dt);
+            document.getElementById("status_box").append(dd);
+            dt = document.createElement("dt");
+            dd = document.createElement("dd");
+            dt.innerText = "Ready for images?";
+            dd.innerText = currentStatus["accepting_inference"];
+            document.getElementById("status_box").append(dt);
+            document.getElementById("status_box").append(dd);
+        }
+    };
+    xhr.ontimeout = (e) => {
+        document.getElementById("status_headline").innerText = "offline"
+        document.getElementById("status_box").innerHTML = "";
+    };
+    xhr.onerror = (e) => {
+        document.getElementById("status_headline").innerText = "offline"
+        document.getElementById("status_box").innerHTML = "";
+    };
+    xhr.timeout = 3000;
+    xhr.open("GET", "/api/v1/status", true);
+    xhr.send();
+}
+
+window.setInterval(fetchStatus, 2000)
+    </script>
+
     {% if session_info %}
     <span>Logged in as {{ session_info.sub }}</span> <a class="navbar-brand" href="/logout"><button>Logout <div class="famfamfam-silk icon-door_out"></div></button></a>
     {% else %}

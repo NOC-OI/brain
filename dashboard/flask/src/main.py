@@ -6,6 +6,7 @@ import os
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = os.environ.get("UPLOAD_FOLDER", "/app/temp")
 app.config["EXTERNAL_PORT"] = os.environ.get("MANAGEMENT_EXTERNAL_PORT", 80)
+app.config["PUSH_SECRET"] = os.environ.get("MANAGEMENT_PUSH_SECRET", "brain!")
 app.wsgi_app = ProxyFix(app.wsgi_app)
 
 from utils import get_session_info, get_app_frontend_globals
@@ -27,3 +28,4 @@ def home_screen():
 
 if __name__ == "__main__":
     app.run()
+
