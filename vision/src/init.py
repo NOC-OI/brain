@@ -51,6 +51,9 @@ from PIL import Image, ImageDraw
 print_elem_ok("Standard dependencies loaded", True)
 import torch
 print_elem_ok("PyTorch CUDA support", torch.cuda.is_available())
+log("PyTorch Version: " + str(torch.__version__))
+log("CUDA Version: " + str(torch.version.cuda))
+log("CUDA Device: " + str(torch.cuda.get_device_name(0)))
 import torchvision
 print_elem_ok("Torchvision loaded", True)
 import cv2

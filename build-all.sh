@@ -1,6 +1,5 @@
 #!/bin/bash
-cd vision
-./build.sh
-cd ../dashboard
-./build.sh
-cd ..
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+cd $SCRIPT_DIR
+./vision/build.sh
+./dashboard/build.sh
