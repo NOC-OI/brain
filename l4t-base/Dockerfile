@@ -197,24 +197,24 @@ ENV NVIDIA_DRIVER_CAPABILITIES=all
 RUN apt-get -y install python3-pip libopenblas0 libopenblas64-0
 # Deps for pytorch:
 RUN python3 -m pip install --upgrade pip wheel
-#RUN pip install mpmath typing-extensions sympy pillow networkx MarkupSafe fsspec filelock jinja2
-RUN pip install certifi==2025.8.3 charset-normalizer==3.4.2 filelock==3.18.0 fsspec==2025.7.0 idna==3.10 Jinja2==3.1.6 MarkupSafe==3.0.2 mpmath==1.3.0 networkx==3.4.2 numpy==1.23.0 pandas==2.3.1 pexpect==4.8.0 pillow==11.3.0 psutil==7.0.0 ptyprocess==0.7.0 python-dateutil==2.9.0.post0 python-multipart==0.0.20 pytz==2025.2 PyYAML==6.0.2 requests==2.32.4 six==1.17.0 sympy==1.14.0 tensorrt==10.3.0 tensorrt_dispatch==10.3.0 tensorrt_lean==10.3.0 thop==0.1.1.post2209072238 tqdm==4.67.1 typing_extensions==4.14.1 tzdata==2025.2 urllib3==2.5.0 uWSGI==2.0.30
+RUN pip install mpmath==1.3.0 typing_extensions==4.14.1 sympy==1.14.0 pillow==11.3.0 networkx==3.4.2 MarkupSafe==3.0.2 fsspec==2025.7.0 filelock==3.18.0 Jinja2==3.1.6
 COPY libs /tmp/container_build/libs
-RUN pip install /tmp/container_build/libs/torchvision-0.23.0-cp310-cp310-linux_aarch64.whl /tmp/container_build/libs/torch-2.8.0-cp310-cp310-linux_aarch64.whl && sleep 8
+RUN pip install /tmp/container_build/libs/torchvision-0.23.0-cp310-cp310-linux_aarch64.whl /tmp/container_build/libs/torch-2.8.0-cp310-cp310-linux_aarch64.whl
 RUN mkdir -p /usr/src/ultralytics
 # Ultralytics deps
-RUN pip install --no-deps ultralytics==8.3.175
+RUN pip install uWSGI==2.0.30 tqdm==4.67.1 PyYAML==6.0.2 psutil==7.0.0 thop==0.1.1.post2209072238 pandas==2.3.1 python-multipart==0.0.20 numpy==1.23
+RUN pip install --no-cache ultralytics==8.3.175 --no-deps
 
 RUN mkdir /app
 COPY src /app
 WORKDIR /app
-RUN mkdir /app/yolo_conf
-ENV YOLO_CONFIG_DIR="/app/yolo_conf"
-COPY templates/yolo_conf.json /app/yolo_conf/settings.json
+RUN mkdir /etc/yolo_conf
+ENV YOLO_CONFIG_DIR="/etc/yolo_conf"
+COPY templates/yolo_conf.json /etc/yolo_conf/settings.json
 
-RUN pip install pika==1.3.2
-RUN mkdir /mnt/nfs_cam
-RUN mkdir -p temp
+#RUN pip install --no-cache pika==1.3.2 requests==2.32.4
+#RUN mkdir /mnt/nfs_cam
+#RUN mkdir -p temp
 ENTRYPOINT ["python3", "init.py"]
 STOPSIGNAL SIGQUIT
 

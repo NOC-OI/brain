@@ -47,4 +47,26 @@ Username: $oauthtoken
 Password: <Your Key>
 \end{lstlisting}
 
+\subsection{Testing using the NOC L4T base image}
+
+The NOC L4T image is a pre-built docker image that contains PyTorch, torchvision and ultralytics (for using YOLO models). It also includes a self-test script as a placeholder to be overwritten with your intended application. This is useful for testing your configuration is correct. Your output should look similar to below:
+
+\begin{lstlisting}
+user@brain:~/git/brain/vision$ docker run --runtime nvidia -it brain/l4t-base:j62-r36.4-0
+NOC L4T (Linux 4 Tegra) base image test script
+
+✓ Standard dependencies loaded
+✓ PyTorch CUDA support
+    PyTorch Version: 2.8.0
+    CUDA Version: 12.6
+    CUDA Device: Orin
+✓ Torchvision loaded
+✓ OpenCV loaded
+✓ Ultralytics YOLO loaded
+
+If everything comes back without error, you have configured your Jetson correctly!
+This is a base container, you should extend from it with your own application.
+\end{lstlisting}
+
+
 \end{document}
