@@ -1,5 +1,8 @@
-dashboard/flask/src/temp
-vision/libs
+# Ignore uploaded files from devel mode
+dashboard/flask/src/temp/
+
+# Ignore cloned l4t-base directory if present
+l4t-base*/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
