@@ -1,7 +1,7 @@
 #!/bin/bash
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd $SCRIPT_DIR
-if [ -z "$(docker images -q brain/l4t-base:j62-r36.4-1 2> /dev/null)" ]; then
+if [ -z "$(docker images -q brain/l4t-base:j62-r36.4-0 2> /dev/null)" ]; then
     if [ -d "l4t-base-j62-r36.4-0" ]; then
         ./l4t-base-j62-r36.4-0/build.sh
     else
