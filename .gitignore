@@ -4,6 +4,14 @@ dashboard/flask/src/temp/
 # Ignore cloned l4t-base directory if present
 l4t-base*/
 
+# Ignore Latex docs aux files
+docs/*.aux
+docs/*.bcf
+docs/*.log
+docs/*.out
+docs/*.run.xml
+docs/*.toc
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

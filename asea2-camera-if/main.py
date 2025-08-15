@@ -5,17 +5,21 @@ import time
 import numpy as np
 import io
 import math
+import pika
 from PIL import Image
 
 
-#from huggingface_hub import hf_hub_download
-#from ultralytics import YOLO
-
-#model_path = hf_hub_download(repo_id="AdamCodd/YOLOv11n-face-detection", filename="model.pt")
-#model = YOLO(model_path)
-
-
 cv2.namedWindow("ASEA2")
+# ASEA2 is a 3:2 aspect ratio sensor with a raw resolution of 5472, 3648, so we probably want one of the following resolutions:
+# 2736  1824    Full Sensor (post bayer filter)
+# 2560  1700    Common 2560 horizontal resolution
+# 2160  1440    Common 1440 vertical resolution
+# 1920  1280    Common 1920 horizontal resolution
+# 1080  720     Common 720 vertical resolution
+# 960   640     DVGA
+# 480   320     HVGA
+# 240   160     Half QVGA
+output_resolution = (1920,1280)
 fps = 8
 
 try:
@@ -36,12 +40,9 @@ try:
             float_arr = np.power(raw_arr.astype(np.float32) / float(2 ** 16), 0.5)
             raw_img = (float_arr * (2 ** 16)).astype(np.uint16)
             img = cv2.cvtColor(raw_img, cv2.COLOR_BayerRGGB2BGR)
-            img = cv2.resize(img, (640*2, 480*2))
+            img = cv2.resize(img, output_resolution)
             cv2.imshow("ASEA2", img)
 
-            #results = model.predict((img / (2 ** 8)).astype(np.uint8), save=True)
-            #print(results)
-            #print("Done!")
 
             cv2.waitKey(int((1/fps) * 1000))
             #cv2.waitKey(0)
