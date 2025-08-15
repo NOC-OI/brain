@@ -154,21 +154,82 @@ This document covers installing the BRAIN vision compute stack on an NVIDIA embe
 
 \section{Prerequisites}
 
-The current BRAIN stack is designed to run within docker, with host NVIDIA CUDA drivers of 12.6 or later. The official NVIDIA images come with a full desktop environment and a lot of other bloat. Therefore, BRAIN is currently tested on a host based on the \href{https://cdimage.ubuntu.com/releases/jammy/release/nvidia-tegra/ubuntu-22.04-preinstalled-server-arm64+tegra-jetson.img.xz}{ARM64 Tegra Ubuntu Server 22.04 release}. We target a minimum firmware version of 36.4, which is sometimes installed by default. You should check the firmware version on the UEFI BIOS screen upon first boot. If your firmware version is older than 36.4, you will need to follow the reflashing step detailed in \autoref{sec:debug-reflash_firmware} before continuing. The official NVIDIA images boot the kernel driectly using ExtLinux, but the Ubuntu Server release uses GRUB. To change this setting, you must hit \textit{ESC} to enter the UEFI BIOS settings, and navigate to the submenu .
+\subsection{Essential hardware}
+
+When travelling with the Jetson, it's critical to be prepared with the following items for debugging:
+\begin{itemize}
+\item A laptop with a Debian based OS (This guide has been tested with Ubuntu 24.04 and Debian 13)
+\item USB A/C to USB Micro B cable (for serial debugging)
+\item USB A/C to USB C cable (USB 3.1 capable minimum) (for firmware flashing)
+\item \textgreater{}128GB Micro SD card
+\item SD card reader, if your laptop cannot read them directly
+\item USB C Power Delivery capable power supply
+\item USB Keyboard
+\item Ethernet Cable
+\end{itemize}
+
+\subsection{Flashing the base OS image}
+
+The official NVIDIA images come with a full desktop environment and a lot of other bloat. Therefore, BRAIN is currently built for a host based on the \href{https://cdimage.ubuntu.com/releases/jammy/release/nvidia-tegra/ubuntu-22.04-preinstalled-server-arm64+tegra-jetson.img.xz}{ARM64 Tegra Ubuntu Server 22.04 release}. To begin, download the image and extract it to your computer. Then use \texttt{dd} to write the image to your Micro SD card:
+
+\lstset{style=console}
+\begin{lstlisting}
+alewin@NOCS000000:~$ lsblk
+NAME                     MAJ:MIN RM   SIZE RO TYPE  MOUNTPOINTS
+sda                        8:0    1 238.8G  0 disk
+└─sda1                     8:1    1 238.7G  0 part
+nvme0n1                  259:0    0 476.9G  0 disk
+├─nvme0n1p1              259:1    0   512M  0 part  /boot/efi
+├─nvme0n1p2              259:2    0   488M  0 part  /boot
+└─nvme0n1p3              259:3    0   476G  0 part
+ └─nvme0n1p3_crypt      253:0    0 475.9G  0 crypt
+   ├─nocs000000--vg-root   253:1    0   475G  0 lvm   /
+   └─nocs000000--vg-swap_1 253:2    0   980M  0 lvm   [SWAP]
+alewin@NOCS000000:~$ sudo dd if=ubuntu-22.04-preinstalled-server-arm64+tegra-jetson.img of=/dev/sda bs=16M
+[sudo] password for alewin:
+323+1 records in
+323+1 records out
+5422220800 bytes (5.4 GB, 5.0 GiB) copied, 169.935 s, 31.9 MB/s
+\end{lstlisting}
+
+The current BRAIN stack is designed to run within docker, with host NVIDIA CUDA drivers of 12.6 or later. We target a minimum firmware version of 36.4, which is sometimes installed by default. You should check the firmware version on the UEFI BIOS screen upon first boot of your Jetson. If your firmware version is older than 36.4, you will need to follow the reflashing step detailed in \autoref{sec:debug-reflash_firmware} before continuing.
+
+The official NVIDIA images boot the kernel driectly using ExtLinux, but the Ubuntu Server release uses GRUB. To change this setting, you must hit \textit{ESC} at startup to enter the UEFI BIOS settings, and navigate to the submenu \textit{Device Manager} \Rightarrow \textit{NVIDIA Configuration} \Rightarrow \textit{L4T Configuration} \Rightarrow \textit{L4T Boot Mode}.
 
 \subsection*{Side note specific to the Orin AGX}
 
-The AGX has an internal 32GB eMMC chip which is usually flashed with an old NVIDIA Ubuntu Desktop image. This can be useful to have around, but to ensure consistency, we will use a SD card for both the AGX and Nano OS images. The AGX will want to boot from the eMMC by default, so you must hit \textit{ESC} to enter the UEFI BIOS settings, and change the default boot device to UEFI SD card.
+The AGX has an internal 32GB eMMC chip which is usually flashed with an old NVIDIA Ubuntu Desktop image. This can be useful to keep around, or you can re-flash it to the Ubuntu Server image as well. The AGX will want to boot from the eMMC by default, so you must hit \textit{ESC} to enter the UEFI BIOS settings, and change the default boot device to UEFI SD card. It is in the submenu \textit{Boot Maintenance Manager} \Rightarrow \textit{Boot Options} \Rightarrow \textit{Change Boot Order}.
 
-%\subsection{Specifics to initialise a Jetson Nano}
-
-%https://www.jetson-ai-lab.com/initial_setup_jon.html
-
-%An up-to-date Jetson Nano should be able to boot the NVIDIA official JetPack 6.2 SD card image (\href{https://developer.nvidia.com/downloads/embedded/L4T/r36_Release_v4.4/jp62-r1-orin-nano-sd-card-image.zip}{https://developer.nvidia.com/downloads/embedded/L4T/r36\_Release\_v4.4/jp62-r1-orin-nano-sd-card-image.zip}) straight away. Download the zip file and flash the image inside to an SD card (\gt 128GB reccomended for BRAIN, 64GB realistic minimum) and insert into the Jetson. Once powered on it should boot directly into the OOBE.
+It's not possible to install the entire BRAIN stack to the on-board storage due to space constraints, so it's reccomended to install everything to the SD card. It is possible to install the base OS on eMMC, and leave only the docker images on the SD card, but this is a more complicated install method, and is usually not worth it unless you're unable to source a \textgreater{}128GB Micro SD card.
 
 \subsection{Setting up the base OS image}
 
-By default, the Ubuntu Server image will attempt to mount a cloud-init config file. After about 1m30s it will abort, and create a default user with the username \texttt{ubuntu} and password \texttt{ubuntu}. You will be required to change the password immediately.
+By default, the Ubuntu Server image will attempt to mount a cloud-init config file. After about 1m30s it will abort, and create a default user with the username \texttt{ubuntu} and password \texttt{ubuntu}, and enable this account for SSH login. You will be required to change the password immediately. The fact that this image ships with cloud-init is notable, as it is actually possible to set up the BRAIN stack automatically on Jetson without a monitor at all. However, it's much easier to set up the device manually, and a monitor is a must-have for debugging when all else fails.
+
+The Jetson will automatically connect to any LAN with DHCP on its primary Ethernet interface. You may want to use the arp-scan tool to find it on your LAN:
+
+\lstset{style=console}
+\begin{lstlisting}
+alewin@NOCS000000:~$ sudo arp-scan 10.42.0.0/24
+[sudo] password for alewin:
+Interface: enp0s31f6, type: EN10MB, MAC: 28:00:af:74:97:0c, IPv4: 10.42.0.1
+Starting arp-scan 1.10.0 with 256 hosts (https://github.com/royhills/arp-scan)
+10.42.0.49      3c:6d:66:XX:XX:XX       (Unknown)
+
+1 packets received by filter, 0 packets dropped by kernel
+Ending arp-scan 1.10.0: 256 hosts scanned in 1.989 seconds (128.71 hosts/sec). 1 responded
+
+alewin@NOCS000000:~$ ssh ubuntu@10.42.0.49
+The authenticity of host '10.42.0.49 (10.42.0.49)' can't be established.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '10.42.0.49' (ED25519) to the list of known hosts.
+ubuntu@10.42.0.49's password:
+Welcome to Ubuntu 22.04 LTS (GNU/Linux 5.15.0-1020-nvidia-tegra-igx aarch64)
+[...]
+Last login: Tue Nov 21 22:54:35 2023
+ubuntu@brain0:~$
+
+\end{lstlisting}
 
 Start by creating a new user for deployment, adding them to \texttt{sudo} group:
 
@@ -199,17 +260,62 @@ ubuntu@ubuntu:~$ sudo hostnamectl hostname brain0
 ubuntu@ubuntu:~$ sudo reboot
 \end{lstlisting}
 
-At this point you may wish to switch to using the \texttt{deploy} user via SSH. Connect the Ethernet port to a LAN with DHCP and issue the command \texttt{ip a} to get the IP address assigned.
+After the reboot, login with the deploy account. Now's a good time to remove \texttt{unattended-upgrades} for production systems to avoid automatic updates mid-deployment, and \texttt{cloud-init} as it's not neccesary, and can cause problems in the boot process.
 
 \lstset{style=console}
 \begin{lstlisting}
-ubuntu@ubuntu:~$ sudo apt update
-
+deploy@brain0:~$ sudo apt update
+Hit:1 http://ports.ubuntu.com/ubuntu-ports jammy InRelease
+Get:2 http://ports.ubuntu.com/ubuntu-ports jammy-updates InRelease [128 kB]
+[...]
+Fetched 18.4 MB in 4s (4728 kB/s)
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+178 packages can be upgraded. Run 'apt list --upgradable' to see them.
+deploy@brain0:~$ sudo apt remove unattended-upgrades cloud-init
+[...]
+deploy@brain0:~$ sudo apt upgrade
+[...]
+deploy@brain0:~$
 \end{lstlisting}
 
-\subsection{Installing NVIDIA container runtime and Docker}
+\subsection{Installing NVIDIA container runtime and other dependancies}
+
+%https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#configuration
+
+%echo "export PATH=/usr/local/cuda-12.6/bin\${PATH:+:\${PATH}}" >> ~/.profile
+%echo "export LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64\${LD_LIBRARY_PATH:+:\${LD_LIBRARY_PATH}}" >> ~/.profile
+%sudo apt install -y cuda libnvinfer-bin
+
+\lstset{style=console}
+\begin{lstlisting}
+sudo add-apt-repository ppa:ubuntu-tegra/updates
+sudo apt update
+sudo apt install -y nvidia-tegra-drivers-36
 
 
+
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+curl -s -L https://repo.download.nvidia.com/jetson/jetson-ota-public.asc | sudo tee /etc/apt/trusted.gpg.d/jetson-ota-public.asc
+sudo chmod 644 /etc/apt/trusted.gpg.d/jetson-ota-public.asc
+echo "deb https://repo.download.nvidia.com/jetson/common r36.4 main" | sudo tee -a /etc/apt/sources.list.d/nvidia-l4t-apt-source.list
+echo "deb https://repo.download.nvidia.com/jetson/t234 r36.4 main" | sudo tee -a /etc/apt/sources.list.d/nvidia-l4t-apt-source.list
+sudo apt update
+sudo apt install docker.io docker-compose nvidia-container-toolkit nvidia-container-toolkit-base
+sudo usermod -aG render,docker deploy
+\end{lstlisting}
+
+Now reboot to make sure all drivers are correctly loaded. Continue to configure the newly installed NVIDIA Container Toolkit:
+
+\lstset{style=console}
+\begin{lstlisting}
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo service docker restart
+\end{lstlisting}
+
+%sudo apt install nvidia-jetpack-runtime
 
 \subsection{Testing host using the NOC L4T base image}
 
@@ -235,6 +341,14 @@ If everything comes back without error, you have configured your Jetson correctl
 This is a base container, you should extend from it with your own application.
 \end{lstlisting}
 
+If you don't have access to the BODC repo, but have the l4t-base image, load it as follows before continuing:
+
+\lstset{style=console}
+\begin{lstlisting}
+deploy@brain:~$ docker load --input l4t-base-j62-r36.4-2.tar
+deploy@brain:~$ docker image tag 67e005c29188 docker-repo.bodc.me/oceaninfo/l4t-base:j62-r36.4-2
+\end{lstlisting}
+
 \textbf{NOTE:} For older versions of BRAIN, it was neccesary to set up API keys for NVIDIA's container repository. You can do this by signing up for an NVIDIA developer account, and proceeding to \href{https://org.ngc.nvidia.com/setup/api-keys}{https://org.ngc.nvidia.com/setup/api-keys}. Supply the bearer token as follows:
 
 \lstset{style=console}
@@ -243,6 +357,14 @@ deploy@brain:~/git/brain$ docker login nvcr.io
 Username: $oauthtoken
 Password: <Your Key>
 \end{lstlisting}
+
+\newpage
+
+\section{Installing the BRAIN stack}
+
+\newpage
+
+\section{Configuring the BRAIN stack}
 
 \newpage
 
