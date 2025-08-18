@@ -231,6 +231,8 @@ ubuntu@brain0:~$
 
 \end{lstlisting}
 
+\textbf{NOTE:} If you plan to use the SD card on Jetsons other than the one it first booted in, see \autoref{sec:debug-network_config} for additional setup needed to ensure DHCP works as expected.
+
 Start by creating a new user for deployment, adding them to \texttt{sudo} group:
 
 \lstset{style=console}
@@ -341,18 +343,33 @@ deploy@brain:~$ docker load --input l4t-base-j62-r36.4-2.tar
 deploy@brain:~$ docker image tag 67e005c29188 docker-repo.bodc.me/oceaninfo/l4t-base:j62-r36.4-2
 \end{lstlisting}
 
-\textbf{NOTE:} For older versions of BRAIN, it was neccesary to set up API keys for NVIDIA's container repository. You can do this by signing up for an NVIDIA developer account, and proceeding to \href{https://org.ngc.nvidia.com/setup/api-keys}{https://org.ngc.nvidia.com/setup/api-keys}. Supply the bearer token as follows:
-
-\lstset{style=console}
-\begin{lstlisting}
-deploy@brain:~/git/brain$ docker login nvcr.io
-Username: $oauthtoken
-Password: <Your Key>
-\end{lstlisting}
-
 \newpage
 
 \section{Installing the BRAIN stack}
+
+Start by cloning the BRAIN repo and entering the directory.
+
+\lstset{style=console}
+\begin{lstlisting}
+deploy@brain:~$ git clone git@github.com:NOC-OI/brain.git
+deploy@brain:~$ cd brain
+\end{lstlisting}
+
+Build all packages and then run the stack:
+
+\lstset{style=console}
+\begin{lstlisting}
+deploy@brain:~/brain$ ./build-all.sh
+deploy@brain:~/brain$ docker compose up
+\end{lstlisting}
+
+You should now be able to access the BRAIN dashboard from the connected LAN on HTTP port 80. By default BRAIN does not expose HTTPS.
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.75\textwidth]{brain-cpanel}
+\caption{Initial screen of the BRAIN dashboard.}
+\end{figure}
 
 \newpage
 
@@ -362,6 +379,11 @@ Password: <Your Key>
 
 \section{Debugging}
 
+\subsection{Default network configuration}
+\label{sec:debug-network_config}
+
+The Ubuntu Server image ships with netplan by default, which will be configured by cloud-init to set the primary Ethernet port to be a DHCP client. By default \textbf{it locks this configuration to the MAC address seen on first boot}. This means that without removing the "match" line from /etc/netplan/50-cloud-init.yaml you will not be able to use the SD card interchangably on other Jetsons.
+
 \subsection{Reflashing firmware}
 \label{sec:debug-reflash_firmware}
 
@@ -369,9 +391,39 @@ With the software stack on the NVIDIA Jetsons being a little unstable, it's enti
 
 Firmware for all Orin devices, including flash.sh can be found at \href{https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.3/release/Jetson_Linux_r36.4.3_aarch64.tbz2}{https://developer.nvidia.com/downloads/embedded/l4t/r36\_release\_v4.3/release/Jetson\_Linux\_r36.4.3\_aarch64.tbz2}. The instructions below are derived from instructions found on \href{https://ubuntu.com/download/nvidia-jetson}{Ubuntu's NVIDIA Jetson download page}.
 
+Run the following commands to set up your host machine for flashing.
+
+\lstset{style=console}
+\begin{lstlisting}
+alewin@NOCS000000:~$ sudo apt install -y python3 mkbootimg bzip2 cpp device-tree-compiler
+alewin@NOCS000000:~$ wget https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.3/release/Jetson_Linux_r36.4.3_aarch64.tbz2
+alewin@NOCS000000:~$ tar xf Jetson_Linux_R36.4.3_aarch64.tbz2 && cd Linux_for_Tegra/
+alewin@NOCS000000:~$ sudo ./tools/l4t_flash_prerequisites.sh
+\end{lstlisting}
+
+You should now connect your computer to the USB C port next to the GPIO pins. You can only use this port for flashing firmware. The AGX has a dedicated "force recovery" button (this is the middle one of three). Hold this down while powering the device on. Once the light comes on, you may release the button. Now start to flash the firmware, for the AGX run:
+
+\lstset{style=console}
+\begin{lstlisting}
+alewin@NOCS000000:~$ sudo ./flash.sh p3737-0000-p3701-0000-qspi internal
+\end{lstlisting}
+
+This command will take a long while (about 15 mins) and may appear to hang at times. Be patient, and it should eventually come back with success.
+
 \subsection*{Side note specific to the Orin Nano}
 
 One alternative method is to first boot the JetPack 5.1.3 SD card image (\href{https://developer.nvidia.com/downloads/embedded/l4t/r35_release_v5.0/jp513-orin-nano-sd-card-image.zip}{https://developer.nvidia.com/downloads/embedded/l4t/r35\_release\_v5.0/jp513-orin-nano-sd-card-image.zip}) and to use apt to update the firmware. This has had mixed results in the past and is not reccomended.
+
+\subsection{Authenticating against the NVIDIA container repository}
+
+For older versions of BRAIN, it was neccesary to set up API keys for NVIDIA's container repository. You can do this by signing up for an NVIDIA developer account, and proceeding to \href{https://org.ngc.nvidia.com/setup/api-keys}{https://org.ngc.nvidia.com/setup/api-keys}. Supply the bearer token as follows:
+
+\lstset{style=console}
+\begin{lstlisting}
+deploy@brain:~$ docker login nvcr.io
+Username: $oauthtoken
+Password: <Your Key>
+\end{lstlisting}
 
 \printbibliography
 
