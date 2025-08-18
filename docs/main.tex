@@ -302,15 +302,10 @@ echo "deb https://repo.download.nvidia.com/jetson/t234 r36.4 main" | sudo tee -a
 sudo apt update
 sudo apt install docker.io docker-compose docker-buildx docker-compose-v2 nvidia-container-toolkit nvidia-container-toolkit-base
 sudo usermod -aG render,docker deploy
-\end{lstlisting}
-
-Now reboot to make sure all drivers are correctly loaded. Continue to configure the newly installed NVIDIA Container Toolkit:
-
-\lstset{style=console}
-\begin{lstlisting}
 sudo nvidia-ctk runtime configure --runtime=docker
-sudo service docker restart
 \end{lstlisting}
+
+Now reboot to make sure all drivers are correctly loaded, and the NVIDIA Container Toolking config changes are loaded.
 
 %sudo apt install nvidia-jetpack-runtime
 
