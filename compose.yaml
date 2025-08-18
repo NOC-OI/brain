@@ -10,7 +10,6 @@ services:
       - ${MANAGEMENT_EXTERNAL_PORT}:80
     networks:
       - private
-      - public
     volumes:
       - ./templates/nginx.conf:/etc/nginx/conf.d/revproxy.conf
 
@@ -28,6 +27,8 @@ services:
   vision:
     image: brain/vision
     container_name: brain-vision
+    depends_on:
+      - rabbitmq
     runtime: nvidia
     entrypoint: ["python3", "init.py"]
     deploy:
@@ -37,8 +38,24 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+
+    volumes:
+      - /mnt/tempdisk:/app/temp
     env_file:
       - ./.env
+    networks:
+      - private
+
+  asea2-camera-if:
+    image: brain/asea2-camera-if:0.0
+    container_name: brain-asea2-camera-if
+    depends_on:
+      - rabbitmq
+    entrypoint: ["python3", "main.py"]
+    env_file:
+      - ./.env
+    volumes:
+      - /mnt/nfs_cam/test_22398525:/mnt/nfs_cam
     networks:
       - private
 
@@ -59,8 +76,5 @@ services:
       - private
     
 networks:
-  public:
-    external: true
-    driver: bridge
   private:
     external: false

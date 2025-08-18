@@ -5,7 +5,9 @@ import json
 import datetime
 import pika
 import requests
+import base64
 import time
+import io
 
 logfile = open("vision.log", "a")
 
@@ -105,6 +107,7 @@ def infer_frame(frame):
                 imd.rectangle(shape, fill = None, outline = "red")
         return img
     else:
+        log("Asked to infer frame with no model!")
         return None
 
 def main():
@@ -117,13 +120,26 @@ def main():
     channel = connection.channel()
     channel.queue_declare(queue="brain_vision_cmd")
 
-    def callback(ch, method, properties, body):
+    def cmd_callback(ch, method, properties, body):
         body_object = json.loads(body.decode("utf-8"))
-        log("CMD => " + json.dumps(body_object))
+        #log("CMD => " + json.dumps(body_object))
+        log("CMD => " + body_object["cmd"])
         if body_object["cmd"] == "set_model":
             set_new_model(body_object["file"])
+        elif body_object["cmd"] == "infer_frame":
+            image_data = base64.b64decode(body_object["image_data"])
+            image = Image.open(io.BytesIO(image_data))
+            output_frame = infer_frame(image)
+            dts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H-%M-%S")
+            ofpath = "temp/" + dts + ".jpg"
+            if output_frame is None:
+                log("No model to run inference!")
+                image.save(ofpath)
+            else:
+                log("Saving plots to " + ofpath)
+                output_frame.save(ofpath)
 
-    channel.basic_consume(queue="brain_vision_cmd", auto_ack=True, on_message_callback=callback)
+    channel.basic_consume(queue="brain_vision_cmd", auto_ack=True, on_message_callback=cmd_callback)
 
     print_elem_ok("Vision worker ready for jobs", True)
 
