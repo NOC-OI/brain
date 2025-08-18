@@ -56,6 +56,7 @@ while True:
         raw_img = (float_arr * (2 ** 16)).astype(np.uint16)
         img = cv2.cvtColor(raw_img, cv2.COLOR_BayerRGGB2BGR)
         img = cv2.resize(img, output_resolution)
+        img = (img/256).astype('uint8')
         status,img_str = cv2.imencode("frame.jpg", img)
         if status == False:
             print("Error encoding frame!")
