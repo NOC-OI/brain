@@ -99,6 +99,18 @@ def api_get_status():
             pass
     return status_msg
 
+@base_api.route("/api/v1/config", methods=['GET'])
+def api_get_config():
+    config_val = {}
+    for i in range(5):
+        try:
+            with open("config.json", "r") as file:
+                config_val = json.loads(file.read())
+            break
+        except IOError:
+            pass
+    return config_val
+
 @base_api.route("/api/v1/status", methods=['POST'])
 def api_set_status():
     #if current_app.config["PUSH_SECRET"] == :

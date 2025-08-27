@@ -12,7 +12,6 @@ import json
 import traceback
 import datetime
 import csv
-import libnfs
 import base64
 import subprocess
 from PIL import Image
@@ -134,6 +133,7 @@ async def cmd_loop_fun():
 async def frame_loop_fun():
     global aiormq_connection
     #set_nfs_server("nfs://192.168.178.28/srv/nfs_cam")
+    last_frame = None
 
     while True:
         if aiormq_connection is not None:
@@ -166,7 +166,7 @@ async def frame_loop_fun():
                         partial_row = fh.readline().decode().strip('\n')
                         last_row = fh.readline().decode().strip('\n')
                     csv_string = header_row + "\n" + last_row
-                    log(csv_string)
+                    #log(csv_string)
 
                     fh = io.StringIO(csv_string)
                     reader = csv.DictReader(fh)
@@ -175,7 +175,10 @@ async def frame_loop_fun():
                         last_row = row
                     if last_row is not None:
                         filename = "/mnt/nfs_cam/" + last_row["filename"][len("/media/images/"):]
-                        await send_frame(os.path.abspath(filename))
+                        filename = os.path.abspath(filename)
+                        if filename != last_frame:
+                            last_frame = filename
+                            await send_frame(filename)
 
                 await asyncio.sleep(1)
 
