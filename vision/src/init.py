@@ -142,8 +142,8 @@ def main():
             image_data = base64.b64decode(body_object["image_data"])
             image = Image.open(io.BytesIO(image_data))
             output_frame = infer_frame(image)
-            dts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H-%M-%S")
-            ofpath = "temp/" + dts + ".jpg"
+            #dts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H-%M-%S")
+            #ofpath = "temp/" + dts + ".jpg"
             if output_frame is None:
                 log("No model to run inference!")
             else:
