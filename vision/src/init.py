@@ -106,17 +106,17 @@ def infer_frame(frame):
                 detected_class = model.names[detected_class_id]
                 confidence = box.conf.cpu().detach().numpy().tolist()[0]
 
-                position = (shape[0], shape[1] - 28)
+                position = (shape[0], shape[1] - (58 + 8))
                 if position[1] < 0:
                     position = (shape[0], shape[1])
                 font = ImageFont.truetype("Roboto-Regular.ttf", 60)
-                text = detected_class + ": " + str(confidence)
+                text = detected_class + ": " + str(int(confidence * 100)) + "%"
                 text_bbox = imd.textbbox(position, text, font=font)
                 imd.rectangle(shape, fill = None, outline = "red", width=8)
                 imd.rectangle(text_bbox, fill="red", outline = "red", width=8)
                 imd.text(position, text, font=font, fill="black")
 
-                log(detected_class + " (conf " + str(confidence) + ") @ " + json.dumps(shape))
+                log(detected_class + " (conf " + str(confidence * 100) + "%) @ " + json.dumps(shape))
         return img
     else:
         log("Asked to infer frame with no model!")

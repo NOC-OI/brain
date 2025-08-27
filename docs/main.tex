@@ -302,12 +302,13 @@ sudo chmod 644 /etc/apt/trusted.gpg.d/jetson-ota-public.asc
 echo "deb https://repo.download.nvidia.com/jetson/common r36.4 main" | sudo tee -a /etc/apt/sources.list.d/nvidia-l4t-apt-source.list
 echo "deb https://repo.download.nvidia.com/jetson/t234 r36.4 main" | sudo tee -a /etc/apt/sources.list.d/nvidia-l4t-apt-source.list
 sudo apt update
+sudo apt install -y nfs-kernel-server
 sudo apt install docker.io docker-compose docker-buildx docker-compose-v2 nvidia-container-toolkit nvidia-container-toolkit-base
 sudo usermod -aG render,docker deploy
 sudo nvidia-ctk runtime configure --runtime=docker
 \end{lstlisting}
 
-Now reboot to make sure all drivers are correctly loaded, and the NVIDIA Container Toolking config changes are loaded.
+Now reboot to make sure all drivers are correctly loaded, and the NVIDIA Container Toolkit config changes are loaded.
 
 %sudo apt install nvidia-jetpack-runtime
 
