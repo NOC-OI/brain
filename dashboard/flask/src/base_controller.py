@@ -4,6 +4,7 @@ import requests
 import datetime
 import json
 import os
+import glob
 
 from werkzeug.utils import secure_filename
 from utils import get_session_info, get_app_frontend_globals, check_password, session_data_to_jwt, publish_message
@@ -57,9 +58,34 @@ def api_upload_model():
         return {"error": "No file selected"}
     if file:
         filename = secure_filename(file.filename)
-        file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+        models_dir = current_app.config["UPLOAD_FOLDER"] + "/models"
+        os.makedirs(models_dir, exist_ok=True)
+        file.save(os.path.join(models_dir, filename))
         print("Uploaded file!")
         return redirect("/")
+
+@base_api.route("/api/v1/upload_frame", methods=['POST'])
+def api_upload_frame():
+    if 'file' not in request.files:
+        return {"error": "No file uploaded"}
+    file = request.files['file']
+    if file.filename == '':
+        return {"error": "No file selected"}
+    if file:
+        dts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        filename = "frame_" + dts + ".jpg"
+        file.save(os.path.join("/app/temp", filename))
+
+
+        list_of_files = glob.glob("/app/temp/frame_*.jpg")
+        if len(list_of_files) != 0:
+            list_of_files.sort(key=lambda x: os.path.getctime(x))
+            #print(list_of_files)
+            if len(list_of_files) > 3:
+                for filename in list_of_files[:-3]:
+                    os.remove(filename)
+
+        return {"status": "ok"}
 
 @base_api.route("/api/v1/status", methods=['GET'])
 def api_get_status():
@@ -70,7 +96,7 @@ def api_get_status():
                 status_msg = json.loads(file.read())
             break
         except IOError:
-            time.sleep(1)
+            pass
     return status_msg
 
 @base_api.route("/api/v1/status", methods=['POST'])
@@ -104,9 +130,24 @@ def api_set_vision_model():
             "file": request.form.get("model")
         }
     publish_message("vision", body)
-    return {"status": "ok"}
+    return redirect("/")
 
 @base_api.route("/api/v1/models/<filename>", methods=['GET'])
 def api_get_model(filename):
     filename = secure_filename(filename)
-    return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
+    return send_from_directory(current_app.config['UPLOAD_FOLDER'] + "/models", filename)
+
+@base_api.route("/api/v1/tempfile/<filename>", methods=['GET'])
+def api_get_tempfile(filename):
+    filename = secure_filename(filename)
+    return send_from_directory("/app/temp", filename)
+
+@base_api.route("/api/v1/frame", methods=['GET'])
+def api_get_lastest_frame():
+    list_of_files = glob.glob("/app/temp/frame_*.jpg")
+    if len(list_of_files) == 0:
+        return {"err": "No frames!"}
+    else:
+        latest_file = max(list_of_files, key=os.path.getctime)
+        #return {"file": os.path.basename(latest_file)}
+        return send_from_directory("/app/temp", os.path.basename(latest_file))

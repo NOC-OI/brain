@@ -10,6 +10,8 @@
     <h2>Status: <span id="status_headline">javascript disabled :(</span></h2>
     <dl id="status_box"></dl>
 
+    <img id="cam_view" src="/static/no-image.jpg" style="width:100mm; max-width: 100%;" /><br />
+
     <script>
 document.getElementById("status_headline").innerText = "unknown";
 
@@ -37,19 +39,29 @@ let fetchStatus = () => {
             dd.innerText = currentStatus["accepting_inference"];
             document.getElementById("status_box").append(dt);
             document.getElementById("status_box").append(dd);
+            if (currentStatus["accepting_inference"]) {
+                document.getElementById("cam_view").src = "/api/v1/frame?" + Date.now();
+            } else {
+                document.getElementById("cam_view").src = "/static/no-image.jpg"
+            }
+        } else {
+            document.getElementById("cam_view").src = "/static/no-image.jpg"
         }
     };
     xhr.ontimeout = (e) => {
         document.getElementById("status_headline").innerText = "offline"
         document.getElementById("status_box").innerHTML = "";
+        document.getElementById("cam_view").src = "/static/no-image.jpg"
     };
     xhr.onerror = (e) => {
         document.getElementById("status_headline").innerText = "offline"
         document.getElementById("status_box").innerHTML = "";
+        document.getElementById("cam_view").src = "/static/no-image.jpg"
     };
     xhr.timeout = 3000;
     xhr.open("GET", "/api/v1/status", true);
     xhr.send();
+
 }
 
 window.setInterval(fetchStatus, 2000)

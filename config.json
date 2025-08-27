@@ -1,0 +1,12 @@
+{
+    "vision": {
+        "model": {
+            "path": "face2.pth"
+        },
+        "camera": {
+            "driver": "asea2-camera-if",
+            "nfs_resource": "nfs://192.168.178.28:/srv/nfs_cam",
+            "target_csv": null
+        }
+    }
+}

@@ -4,7 +4,7 @@ import os
 
 
 app = Flask(__name__)
-app.config["UPLOAD_FOLDER"] = os.environ.get("UPLOAD_FOLDER", "/app/temp")
+app.config["UPLOAD_FOLDER"] = os.environ.get("UPLOAD_FOLDER", "/var/brain")
 app.config["EXTERNAL_PORT"] = os.environ.get("MANAGEMENT_EXTERNAL_PORT", 80)
 app.config["PUSH_SECRET"] = os.environ.get("MANAGEMENT_PUSH_SECRET", "brain!")
 app.wsgi_app = ProxyFix(app.wsgi_app)
@@ -22,7 +22,8 @@ def not_found_error_handler(e):
 @app.route("/")
 def home_screen():
     local_vars = {}
-    models_dir = app.config["UPLOAD_FOLDER"]
+    models_dir = app.config["UPLOAD_FOLDER"] + "/models"
+    os.makedirs(models_dir, exist_ok=True)
     local_vars["available_models"] = [f for f in os.listdir(models_dir) if os.path.isfile(os.path.join(models_dir, f))]
     return render_template("index.html", global_vars=get_app_frontend_globals(), local_vars=local_vars, session_info=get_session_info())
 

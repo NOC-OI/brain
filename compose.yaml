@@ -6,6 +6,7 @@ services:
       - dashboard
     env_file:
       - ./.env
+    attach: false
     ports:
       - ${MANAGEMENT_EXTERNAL_PORT}:80
     networks:
@@ -21,6 +22,9 @@ services:
     entrypoint: ["gunicorn", "-w", "${GUNICORN_WORKERS}", "main:app", "-b", "0.0.0.0:8080"]
     env_file:
       - ./.env
+    volumes:
+      - ./config.json:/app/config.json
+      - /var/brain:/var/brain
     networks:
       - private
 
@@ -30,7 +34,6 @@ services:
     depends_on:
       - rabbitmq
     runtime: nvidia
-    entrypoint: ["python3", "init.py"]
     deploy:
       resources:
         reservations:
@@ -38,9 +41,6 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-
-    volumes:
-      - /mnt/tempdisk:/app/temp
     env_file:
       - ./.env
     networks:
@@ -51,11 +51,10 @@ services:
     container_name: brain-asea2-camera-if
     depends_on:
       - rabbitmq
-    entrypoint: ["python3", "main.py"]
+    volumes:
+      - /mnt/nfs_cam:/mnt/nfs_cam
     env_file:
       - ./.env
-    volumes:
-      - /mnt/nfs_cam/test_22398525:/mnt/nfs_cam
     networks:
       - private
 
@@ -67,6 +66,7 @@ services:
       interval: 30s
       timeout: 30s
       retries: 3
+    attach: false
     ports:
       - 5672:5672
     env_file:

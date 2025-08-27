@@ -9,8 +9,6 @@ import base64
 import time
 import io
 
-logfile = open("vision.log", "a")
-
 def log(line, level=1):
     dts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S %z")
     ll = "INFO"
@@ -21,8 +19,7 @@ def log(line, level=1):
     if level>3:
         ll = "CRIT"
 
-    print("[" + dts + "] [" + ll + "] " + line, file=logfile) # The Nvidia container runtime sometimes fails to print output (!) so we log to an internal file
-    logfile.flush()
+    print("[" + dts + "] [" + ll + "] " + line, flush=True) # The Nvidia container runtime has an outstanding issues with buffered output, so flush after every log line
 
 
 log("Testing dependencies...")
@@ -49,7 +46,7 @@ def update_status():
 
 update_status()
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 print_elem_ok("Standard dependencies loaded", True)
 import torch
 print_elem_ok("PyTorch CUDA support", torch.cuda.is_available())
@@ -71,6 +68,7 @@ print_elem_ok("Ultralytics YOLO loaded", True)
 model = None
 
 def set_new_model(modelname):
+    global model
     model = None
     status_msg["status"] = "busy"
     status_msg["accepting_inference"] = False
@@ -93,6 +91,7 @@ def set_new_model(modelname):
     print_elem_ok("New model " + modelname + " loaded", True)
 
 def infer_frame(frame):
+    global model
     if model is not None:
         results = model(frame)
         log("Plotting boxes...")
@@ -103,8 +102,21 @@ def infer_frame(frame):
             for box in boxes:
                 raw_shape = box.xyxy.cpu().detach().numpy()
                 shape = raw_shape.tolist()[0]
-                log(shape)
-                imd.rectangle(shape, fill = None, outline = "red")
+                detected_class_id = int(box.cls.cpu().item())
+                detected_class = model.names[detected_class_id]
+                confidence = box.conf.cpu().detach().numpy().tolist()[0]
+
+                position = (shape[0], shape[1] - 28)
+                if position[1] < 0:
+                    position = (shape[0], shape[1])
+                font = ImageFont.truetype("Roboto-Regular.ttf", 60)
+                text = detected_class + ": " + str(confidence)
+                text_bbox = imd.textbbox(position, text, font=font)
+                imd.rectangle(shape, fill = None, outline = "red", width=8)
+                imd.rectangle(text_bbox, fill="red", outline = "red", width=8)
+                imd.text(position, text, font=font, fill="black")
+
+                log(detected_class + " (conf " + str(confidence) + ") @ " + json.dumps(shape))
         return img
     else:
         log("Asked to infer frame with no model!")
@@ -134,10 +146,15 @@ def main():
             ofpath = "temp/" + dts + ".jpg"
             if output_frame is None:
                 log("No model to run inference!")
-                image.save(ofpath)
             else:
-                log("Saving plots to " + ofpath)
-                output_frame.save(ofpath)
+                log("Transferring plot to dashboard")
+                #output_frame.save(ofpath)
+                url = remote_dashboard + "/api/v1/upload_frame"
+                img_byte_arr = io.BytesIO()
+                output_frame.save(img_byte_arr, format="JPEG")
+                files = {"file": io.BytesIO(img_byte_arr.getvalue())}
+                response = requests.post(url, files=files)
+                #log(response.text)
 
     channel.basic_consume(queue="brain_vision_cmd", auto_ack=True, on_message_callback=cmd_callback)
 
