@@ -92,6 +92,7 @@ def set_new_model(modelname):
 
 def infer_frame(frame):
     global model
+    detections = []
     if model is not None:
         results = model(frame)
         log("Plotting boxes...")
@@ -110,17 +111,32 @@ def infer_frame(frame):
                 if position[1] < 0:
                     position = (shape[0], shape[1])
                 font = ImageFont.truetype("Roboto-Regular.ttf", 60)
-                text = detected_class + ": " + str(int(confidence * 100)) + "%"
+                text = detected_class + ": " + ("%.3f" % confidence)
                 text_bbox = imd.textbbox(position, text, font=font)
                 imd.rectangle(shape, fill = None, outline = "red", width=8)
                 imd.rectangle(text_bbox, fill="red", outline = "red", width=8)
                 imd.text(position, text, font=font, fill="black")
 
-                log(detected_class + " (conf " + str(confidence * 100) + "%) @ " + json.dumps(shape))
-        return img
+                log(detected_class + " (conf " + ("%.3f" % confidence) + ") @ " + json.dumps(shape))
+        return detections, img
     else:
         log("Asked to infer frame with no model!")
-        return None
+        img = frame.copy()
+        imd = ImageDraw.Draw(img)
+
+        position = (0, 0)
+        font = ImageFont.truetype("Roboto_Condensed-Bold.ttf", 140)
+        text = "VISION MODEL MISSING"
+        text_bbox = imd.textbbox(position, text, font=font)
+
+        position = ((img.width / 2) - ((text_bbox[2] - text_bbox[0]) / 2), (img.height / 2) - ((text_bbox[3] - text_bbox[1]) / 2))
+        text_bbox = imd.textbbox(position, text, font=font)
+        rect_margin = 16 + 16
+        rect_bbox = [text_bbox[0] - rect_margin, text_bbox[1] - rect_margin, text_bbox[2] + rect_margin, text_bbox[3] + rect_margin]
+        imd.rectangle(rect_bbox, fill="red", outline = "white", width=16)
+        imd.text(position, text, font=font, fill="white")
+
+        return detections, img
 
 def main():
     rabbitmq_credentials = pika.PlainCredentials(os.environ.get("RABBITMQ_DEFAULT_USER", "brain"), os.environ.get("RABBITMQ_DEFAULT_PASS", "brain!"))
@@ -141,13 +157,13 @@ def main():
         elif body_object["cmd"] == "infer_frame":
             image_data = base64.b64decode(body_object["image_data"])
             image = Image.open(io.BytesIO(image_data))
-            output_frame = infer_frame(image)
+            detections, output_frame = infer_frame(image)
             #dts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H-%M-%S")
             #ofpath = "temp/" + dts + ".jpg"
             if output_frame is None:
-                log("No model to run inference!")
+                log("Error inferring frame", 3)
             else:
-                log("Transferring plot to dashboard")
+                log("Transferring processed frame to dashboard")
                 #output_frame.save(ofpath)
                 url = remote_dashboard + "/api/v1/upload_frame"
                 img_byte_arr = io.BytesIO()

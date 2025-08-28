@@ -8,7 +8,12 @@
     <h1>{{ global_vars.brand }} Control Panel</h1>
 
     <h2>Status: <span id="status_headline">javascript disabled :(</span></h2>
-    <dl id="status_box"></dl>
+    <dl id="status_box">
+        <dt>Model loaded</dt>
+        <dd>Unknown</dd>
+        <dt>Model state</dt>
+        <dd>Unknown</dd>
+    </dl>
 
     <img id="cam_view" src="/static/no-image.jpg" style="width:100mm; max-width: 100%;" /><br />
 
@@ -29,22 +34,32 @@ let fetchStatus = () => {
             dt.innerText = "Model loaded";
             dd.innerText = currentStatus["model_loaded"];
             if (currentStatus["model_loaded"] == null) {
-                dd.innerText = "null";
+                dd.innerText = "NONE";
             }
             document.getElementById("status_box").append(dt);
             document.getElementById("status_box").append(dd);
             dt = document.createElement("dt");
             dd = document.createElement("dd");
-            dt.innerText = "Ready for images?";
-            dd.innerText = currentStatus["accepting_inference"];
+            dt.innerText = "Model state";
+            dd.innerText = currentStatus["accepting_inference"] ? "Ready for images" : "Not available";
             document.getElementById("status_box").append(dt);
             document.getElementById("status_box").append(dd);
-            if (currentStatus["accepting_inference"]) {
-                document.getElementById("cam_view").src = "/api/v1/frame?" + Date.now();
-            } else {
-                document.getElementById("cam_view").src = "/static/no-image.jpg"
-            }
+            document.getElementById("cam_view").src = "/api/v1/frame?" + Date.now();
         } else {
+            document.getElementById("status_box").innerHTML = "";
+            let dt = document.createElement("dt");
+            let dd = document.createElement("dd");
+            dt.innerText = "Model loaded";
+            dd.innerText = "N/a";
+            document.getElementById("status_box").append(dt);
+            document.getElementById("status_box").append(dd);
+            dt = document.createElement("dt");
+            dd = document.createElement("dd");
+            dt.innerText = "Model state";
+            dd.innerText = "Not available";
+            document.getElementById("status_box").append(dt);
+            document.getElementById("status_box").append(dd);
+
             document.getElementById("cam_view").src = "/static/no-image.jpg"
         }
     };
