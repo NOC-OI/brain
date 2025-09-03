@@ -7,7 +7,5 @@ if [ "$EUID" -ne 0 ]
 fi
 source .env
 export INTERNAL_SERVICE_SECRET
-# Reboot nfs helper
 curl -H "Authorization: Bearer $INTERNAL_SERVICE_SECRET" -X GET http://localhost:8082/destroy > /dev/null 2>&1
-nohup python3 ./asea2-camera-if/host-daemon.py &
-#docker compose up
+docker compose down
