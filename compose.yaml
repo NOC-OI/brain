@@ -25,6 +25,8 @@ services:
     volumes:
       - ./config.json:/app/config.json
       - /var/brain:/var/brain
+    extra_hosts:
+      - host.docker.internal:host-gateway
     networks:
       - private
 
@@ -43,6 +45,8 @@ services:
               capabilities: [gpu]
     env_file:
       - ./.env
+    extra_hosts:
+      - host.docker.internal:host-gateway
     networks:
       - private
 
@@ -55,6 +59,8 @@ services:
       - /mnt/nfs_cam:/mnt/nfs_cam
     env_file:
       - ./.env
+    extra_hosts:
+      - host.docker.internal:host-gateway
     networks:
       - private
 
@@ -78,3 +84,6 @@ services:
 networks:
   private:
     external: false
+
+
+

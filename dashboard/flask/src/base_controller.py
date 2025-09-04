@@ -99,6 +99,11 @@ def api_get_status():
             pass
     return status_msg
 
+@base_api.route("/api/v1/asea2-camera-if/status", methods=['GET'])
+def api_get_asea2_camera_if_status():
+    response = requests.get("http://host.docker.internal:8082/status").json()
+    return response
+
 @base_api.route("/api/v1/config", methods=['GET'])
 def api_get_config():
     config_val = {}

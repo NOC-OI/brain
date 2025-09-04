@@ -13,6 +13,7 @@ import traceback
 import datetime
 import csv
 import base64
+import requests
 import subprocess
 from PIL import Image
 
@@ -37,6 +38,8 @@ rabbitmq_user = os.environ.get("RABBITMQ_DEFAULT_USER", "brain")
 rabbitmq_pass = os.environ.get("RABBITMQ_DEFAULT_PASS", "brain!")
 rabbitmq_host = os.environ.get("RABBITMQ_HOST", "localhost")
 rabbitmq_port = os.environ.get("RABBITMQ_PORT", 5672)
+internal_service_secret = os.environ.get("INTERNAL_SERVICE_SECRET", "brain")
+remote_dashboard = "http://brain-dashboard:8080"
 aqmp_uri = "amqp://" + rabbitmq_user + ":" + rabbitmq_pass + "@" + str(rabbitmq_host) + ":" + str(int(rabbitmq_port)) + "/"
 
 def log(line, level=1):
@@ -130,10 +133,42 @@ async def cmd_loop_fun():
     log("Connected to RabbitMQ server!")
     consume_ok = await channel.basic_consume(queue_declaration.queue, on_cmd, no_ack=True)
 
+async def get_config():
+    while True:
+        try:
+            url = remote_dashboard + "/api/v1/config"
+            ret = requests.get(url, headers={"Content-type": "application/json"})
+            return ret.json()
+        except Exception:
+            log("Could not get config, trying again")
+            await asyncio.sleep(1)
+
+async def set_nfs_resource(endpoint):
+    mounted = False
+
+    response = requests.post("http://host.docker.internal:8082/mount", headers={"Authorization": "Bearer {}".format(internal_service_secret)}, data={"resource": endpoint})
+    if response.ok:
+        while not mounted:
+            await asyncio.sleep(1)
+            response = requests.get("http://host.docker.internal:8082/status")
+            if response.ok:
+                if response.json()["mounted"]:
+                    log("Mounted NFS endpoint: " + response.json()["endpoint"])
+                    mounted = True
+    else:
+        log(response.text)
+        raise requests.exceptions.HTTPError("Could not mount using helper service", response)
+
 async def frame_loop_fun():
     global aiormq_connection
-    #set_nfs_server("nfs://192.168.178.28/srv/nfs_cam")
     last_frame = None
+
+    config = await get_config()
+    log("Got config!")
+    app_specific_config = config["asea2-camera-if"]
+    log(json.dumps(app_specific_config, indent=4))
+
+    await set_nfs_resource(app_specific_config["nfs_resource"])
 
     while True:
         if aiormq_connection is not None:
@@ -180,7 +215,7 @@ async def frame_loop_fun():
                             last_frame = filename
                             await send_frame(filename)
 
-                await asyncio.sleep(1)
+                await asyncio.sleep(0.1)
 
             except Exception:
                 log(traceback.format_exc(), 3)
