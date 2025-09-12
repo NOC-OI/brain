@@ -302,8 +302,8 @@ sudo chmod 644 /etc/apt/trusted.gpg.d/jetson-ota-public.asc
 echo "deb https://repo.download.nvidia.com/jetson/common r36.4 main" | sudo tee -a /etc/apt/sources.list.d/nvidia-l4t-apt-source.list
 echo "deb https://repo.download.nvidia.com/jetson/t234 r36.4 main" | sudo tee -a /etc/apt/sources.list.d/nvidia-l4t-apt-source.list
 sudo apt update
-sudo apt install -y nfs-kernel-server
-sudo apt install docker.io docker-compose docker-buildx docker-compose-v2 nvidia-container-toolkit nvidia-container-toolkit-base
+sudo apt install -y nfs-kernel-server python3-werkzeug
+sudo apt install -y docker.io docker-compose docker-buildx docker-compose-v2 nvidia-container-toolkit nvidia-container-toolkit-base
 sudo usermod -aG render,docker deploy
 sudo nvidia-ctk runtime configure --runtime=docker
 \end{lstlisting}
@@ -348,6 +348,8 @@ deploy@brain:~$ docker image tag 67e005c29188 docker-repo.bodc.me/oceaninfo/l4t-
 
 \section{Installing the BRAIN stack}
 
+\subsection{Cloning the upstream source of BRAIN}
+
 Start by cloning the BRAIN repo and entering the directory.
 
 \lstset{style=console}
@@ -360,11 +362,11 @@ Build all packages and then run the stack:
 
 \lstset{style=console}
 \begin{lstlisting}
-deploy@brain:~/brain$ ./build-all.sh
+deploy@brain:~/brain$ ./scripts/build-all.sh
 deploy@brain:~/brain$ docker compose up
 \end{lstlisting}
 
-You should now be able to access the BRAIN dashboard from the connected LAN on HTTP port 80. By default BRAIN does not expose HTTPS.
+You should now be able to access the BRAIN dashboard from the connected LAN on HTTP port 80. By default BRAIN does not expose HTTPS. Packages are \textbf{not} rebuilt by the \texttt{./scripts/launch.sh} script.
 
 \begin{figure}[h!]
 \centering
@@ -372,9 +374,15 @@ You should now be able to access the BRAIN dashboard from the connected LAN on H
 \caption{Initial screen of the BRAIN dashboard.}
 \end{figure}
 
+\subsection{Setting up the SystemD service}
+
+Most installations require the BRAIN service to be automatically configured on boot. To do this, move the BRAIN directory to the path \texttt{/opt/brain} and copy the \texttt{/opt/brain/brain.service} file into \texttt{/etc/systemd/system/brain.service}. On next boot, the BRAIN stack will be brought up automatically on network configuration.
+
 \newpage
 
-\section{Configuring the BRAIN stack}
+\subsection{Configuring the BRAIN stack}
+
+BRAIN will automatically load the config file \texttt{./config.json}. This file is not watched, so will only apply on reboot. Changes in the dashboard are only temporary, and \textbf{do not affect this file}. When testing before deployment, use \texttt{sudo systemctl restart brain.service} to simulate a reboot of the whole stack.
 
 \newpage
 

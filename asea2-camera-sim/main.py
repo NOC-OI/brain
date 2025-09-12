@@ -7,11 +7,11 @@ import uuid
 import os
 
 # Initialize webcam (0 = default camera)
-cam = cv2.VideoCapture(0)
+cam = cv2.VideoCapture(4)
 csv_file = "/srv/nfs_cam/sim.csv"
 out_dir = "/srv/nfs_cam"
 run_dir = "sim"
-fps = 2
+fps = 5
 os.makedirs(os.path.join(out_dir, run_dir), exist_ok=True)
 
 with open(csv_file, "w") as csv_fh:
