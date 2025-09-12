@@ -1,0 +1,10 @@
+[Unit]
+Description=BRAIN (Backseat Realtime Artificial Intellegence Node)
+
+[Service]
+Restart=always
+ExecStart=/bin/bash /opt/brain/scripts/launch.sh
+ExecStop=/bin/bash /opt/brain/scripts/shutdown.sh
+
+[Install]
+WantedBy=network-online.target
