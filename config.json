@@ -1,10 +1,10 @@
 {
     "vision": {
         "model": {
-            "path": "face2.pth"
+            "path": "mbari_315k_yolov8.pt"
         }
     },
     "asea2-camera-if": {
-        "nfs_resource": "192.168.178.28:/srv/nfs_cam"
+        "nfs_resource": "10.8.16.202:/srv/nfs_cam"
     }
 }

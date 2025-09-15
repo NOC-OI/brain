@@ -168,7 +168,13 @@ async def frame_loop_fun():
     app_specific_config = config["asea2-camera-if"]
     log(json.dumps(app_specific_config, indent=4))
 
-    await set_nfs_resource(app_specific_config["nfs_resource"])
+    if "nfs_resource" in app_specific_config.keys():
+        if app_specific_config["nfs_resource"] is None:
+            log("Skipping mount of NFS resource as none defined")
+        else:
+            await set_nfs_resource(app_specific_config["nfs_resource"])
+    else:
+        log("Skipping mount of NFS resource as none defined")
 
     while True:
         if aiormq_connection is not None:

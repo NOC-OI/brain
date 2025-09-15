@@ -5,6 +5,7 @@ import datetime
 import json
 import os
 import glob
+from pathlib import Path
 
 from werkzeug.utils import secure_filename
 from utils import get_session_info, get_app_frontend_globals, check_password, session_data_to_jwt, publish_message
@@ -97,11 +98,25 @@ def api_get_status():
             break
         except IOError:
             pass
+    try:
+        a2ci_response = requests.get("http://host.docker.internal:8082/status", timeout=1).json()
+        if a2ci_response["mounted"]:
+            status_msg["camera"] = a2ci_response["endpoint"]
+        else:
+            status_msg["camera"] = None
+            if status_msg["status"] == "ok":
+                status_msg["status"] = "error"
+        status_msg["nfs_host_daemon_ok"] = True
+    except Exception:
+        status_msg["camera"] = None
+        status_msg["nfs_host_daemon_ok"] = False
+        if status_msg["status"] == "ok":
+            status_msg["status"] = "booting"
     return status_msg
 
 @base_api.route("/api/v1/asea2-camera-if/status", methods=['GET'])
 def api_get_asea2_camera_if_status():
-    response = requests.get("http://host.docker.internal:8082/status").json()
+    response = requests.get("http://host.docker.internal:8082/status", timeout=5).json()
     return response
 
 @base_api.route("/api/v1/config", methods=['GET'])
@@ -149,10 +164,20 @@ def api_set_vision_model():
     publish_message("vision", body)
     return redirect("/")
 
+@base_api.route("/api/v1/log_detections", methods=['POST'])
+def api_log_detections():
+    detections = request.get_json()
+    print("Got detections object", flush=True)
+    return {"status": "ok"}
+
 @base_api.route("/api/v1/models/<filename>", methods=['GET'])
 def api_get_model(filename):
     filename = secure_filename(filename)
-    return send_from_directory(current_app.config['UPLOAD_FOLDER'] + "/models", filename)
+    modelfile = Path(os.path.join(current_app.config['UPLOAD_FOLDER'], "models", filename))
+    if modelfile.is_file():
+        return send_from_directory(current_app.config['UPLOAD_FOLDER'] + "/models", filename)
+    else:
+        return {"status": "error", "msg": "Could not find model \"" + filename + "\""}, 404
 
 @base_api.route("/api/v1/tempfile/<filename>", methods=['GET'])
 def api_get_tempfile(filename):
@@ -163,7 +188,8 @@ def api_get_tempfile(filename):
 def api_get_lastest_frame():
     list_of_files = glob.glob("/app/temp/frame_*.jpg")
     if len(list_of_files) == 0:
-        return {"err": "No frames!"}
+        #return {"err": "No frames!"}
+        return send_from_directory("/app/static", "no-camera.jpg")
     else:
         latest_file = max(list_of_files, key=os.path.getctime)
         #return {"file": os.path.basename(latest_file)}

@@ -31,7 +31,8 @@ if jwt_secret is None:
     print("[WARNING] JWT_SECRET environment variable not set, using default \"deadbeef\". This is unsafe!")
     jwt_secret = "deadbeef"
 frontend_globals = {
-        "brand": os.environ.get("MANAGEMENT_PANEL_BRANDING", "undefined")
+        "brand": os.environ.get("MANAGEMENT_PANEL_BRANDING", "undefined"),
+        "version_string": "v0.0/2025-09-15"
     }
 
 def check_password(username, password):

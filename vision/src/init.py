@@ -66,6 +66,7 @@ print_elem_ok("Ultralytics YOLO loaded", True)
 #print("Starting inference server") -- this will be a server at some point!
 
 model = None
+app_specific_config = {}
 
 def set_new_model(modelname):
     global model
@@ -77,18 +78,21 @@ def set_new_model(modelname):
     log("Downloading " + modelname + "...")
     url = remote_dashboard + "/api/v1/models/" + modelname
     response = requests.get(url)
-    with open("cmodel.pt", mode="wb") as fh:
-        fh.write(response.content)
-    log("Loading YOLO model...")
-    model = YOLO("cmodel.pt")
-    log("Initialising YOLO model...")
-    dummy_image = Image.new('RGB', (64, 64))
-    results = model(dummy_image)
-    status_msg["status"] = "ok"
-    status_msg["accepting_inference"] = True
-    status_msg["model_loaded"] = modelname
-    update_status()
-    print_elem_ok("New model " + modelname + " loaded", True)
+    if response.status_code == 200:
+        with open("cmodel.pt", mode="wb") as fh:
+            fh.write(response.content)
+        log("Loading YOLO model...")
+        model = YOLO("cmodel.pt")
+        log("Initialising YOLO model...")
+        dummy_image = Image.new('RGB', (64, 64))
+        results = model(dummy_image)
+        status_msg["status"] = "ok"
+        status_msg["accepting_inference"] = True
+        status_msg["model_loaded"] = modelname
+        update_status()
+        print_elem_ok("New model " + modelname + " loaded", True)
+    else:
+        log("Could not download YOLO model from " + url, 3)
 
 def infer_frame(frame):
     global model
@@ -118,6 +122,10 @@ def infer_frame(frame):
                 imd.text(position, text, font=font, fill="black")
 
                 log(detected_class + " (conf " + ("%.3f" % confidence) + ") @ " + json.dumps(shape))
+                detections.append({
+                        "class": detected_class,
+                        "bbox": shape
+                    })
         return detections, img
     else:
         log("Asked to infer frame with no model!")
@@ -138,7 +146,19 @@ def infer_frame(frame):
 
         return detections, img
 
+def get_config():
+    while True:
+        try:
+            url = remote_dashboard + "/api/v1/config"
+            ret = requests.get(url, headers={"Content-type": "application/json"})
+            return ret.json()
+        except Exception:
+            log("Could not get config, trying again")
+            time.sleep(1)
+
 def main():
+    global app_specific_config
+
     rabbitmq_credentials = pika.PlainCredentials(os.environ.get("RABBITMQ_DEFAULT_USER", "brain"), os.environ.get("RABBITMQ_DEFAULT_PASS", "brain!"))
     rabbitmq_host = os.environ.get("RABBITMQ_HOST", "localhost")
     rabbitmq_port = os.environ.get("RABBITMQ_PORT", 5672)
@@ -170,16 +190,33 @@ def main():
                 output_frame.save(img_byte_arr, format="JPEG")
                 files = {"file": io.BytesIO(img_byte_arr.getvalue())}
                 response = requests.post(url, files=files)
+
+                if len(detections) > 0:
+                    url = remote_dashboard + "/api/v1/log_detections"
+                    json_data = {"detections": detections}
+                    response = requests.post(url, json=json_data)
                 #log(response.text)
 
     channel.basic_consume(queue="brain_vision_cmd", auto_ack=True, on_message_callback=cmd_callback)
 
-    print_elem_ok("Vision worker ready for jobs", True)
-
     status_msg["status"] = "ok"
     status_msg["accepting_inference"] = False
     status_msg["model_loaded"] = None
+
+    config = get_config()
+    log("Got config!")
+    if "vision" in config.keys():
+        app_specific_config = config["vision"]
+        log(json.dumps(app_specific_config, indent=4))
+        if "model" in app_specific_config.keys():
+            if app_specific_config["model"] is not None:
+                if app_specific_config["model"]["path"] is not None:
+                    log("Autoloading " + app_specific_config["model"]["path"])
+                    set_new_model(app_specific_config["model"]["path"])
+
     update_status()
+
+    print_elem_ok("Vision worker ready for jobs", True)
 
     channel.start_consuming()
 

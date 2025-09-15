@@ -56,7 +56,7 @@ services:
     depends_on:
       - rabbitmq
     volumes:
-      - /mnt/nfs_cam:/mnt/nfs_cam
+      - /mnt:/mnt
     env_file:
       - ./.env
     extra_hosts:

@@ -10,9 +10,13 @@
     <h2>Status: <span id="status_headline">javascript disabled :(</span></h2>
     <dl id="status_box">
         <dt>Model loaded</dt>
-        <dd>Unknown</dd>
+        <dd>unknown</dd>
         <dt>Model state</dt>
-        <dd>Unknown</dd>
+        <dd>unknown</dd>
+        <dt>Camera state</dt>
+        <dd>unknown</dd>
+        <dt>NFS daemon state</dt>
+        <dd>unknown</dd>
     </dl>
 
     <img id="cam_view" src="/static/no-image.jpg" style="width:100mm; max-width: 100%;" /><br />
@@ -22,55 +26,75 @@ document.getElementById("status_headline").innerText = "unknown";
 
 let currentStatus = {}
 
+let fillDescriptionList = (currentStatus) => {
+    document.getElementById("status_box").innerHTML = "";
+    let dt = document.createElement("dt");
+    let dd = document.createElement("dd");
+    dt.innerText = "Model loaded";
+    if (currentStatus.hasOwnProperty("model_loaded")) {
+        dd.innerText = currentStatus["model_loaded"];
+        if (currentStatus["model_loaded"] == null) {
+            dd.innerText = "none";
+        }
+    } else {
+        dd.innerText = "unknown";
+    }
+    document.getElementById("status_box").append(dt);
+    document.getElementById("status_box").append(dd);
+    dt = document.createElement("dt");
+    dd = document.createElement("dd");
+    dt.innerText = "Model state";
+    if (currentStatus.hasOwnProperty("accepting_inference")) {
+        dd.innerText = currentStatus["accepting_inference"] ? "ready for images" : "not available";
+    } else {
+        dd.innerText = "unknown";
+    }
+    document.getElementById("status_box").append(dt);
+    document.getElementById("status_box").append(dd);
+
+
+    dt = document.createElement("dt");
+    dd = document.createElement("dd");
+    dt.innerText = "Camera state";
+    dd.innerText = currentStatus["camera"];
+    if (currentStatus.hasOwnProperty("camera")) {
+        if (currentStatus["camera"] == null) {
+            dd.innerText = "not mounted";
+        }
+    } else {
+        dd.innerText = "unknown";
+    }
+    document.getElementById("status_box").append(dt);
+    document.getElementById("status_box").append(dd);
+    dt = document.createElement("dt");
+    dd = document.createElement("dd");
+    dt.innerText = "NFS daemon state";
+    if (currentStatus.hasOwnProperty("nfs_host_daemon_ok")) {
+        dd.innerText = currentStatus["nfs_host_daemon_ok"] ? "responsive" : "not responding";
+    } else {
+        dd.innerText = "unknown";
+    }
+    document.getElementById("status_box").append(dt);
+    document.getElementById("status_box").append(dd);
+}
+
 let fetchStatus = () => {
     var xhr = new XMLHttpRequest();
+
     xhr.onload = () => {
         currentStatus = JSON.parse(xhr.responseText);
         document.getElementById("status_headline").innerText = currentStatus["status"];
-        if (currentStatus["status"] == "ok") {
-            document.getElementById("status_box").innerHTML = "";
-            let dt = document.createElement("dt");
-            let dd = document.createElement("dd");
-            dt.innerText = "Model loaded";
-            dd.innerText = currentStatus["model_loaded"];
-            if (currentStatus["model_loaded"] == null) {
-                dd.innerText = "NONE";
-            }
-            document.getElementById("status_box").append(dt);
-            document.getElementById("status_box").append(dd);
-            dt = document.createElement("dt");
-            dd = document.createElement("dd");
-            dt.innerText = "Model state";
-            dd.innerText = currentStatus["accepting_inference"] ? "Ready for images" : "Not available";
-            document.getElementById("status_box").append(dt);
-            document.getElementById("status_box").append(dd);
-            document.getElementById("cam_view").src = "/api/v1/frame?" + Date.now();
-        } else {
-            document.getElementById("status_box").innerHTML = "";
-            let dt = document.createElement("dt");
-            let dd = document.createElement("dd");
-            dt.innerText = "Model loaded";
-            dd.innerText = "N/a";
-            document.getElementById("status_box").append(dt);
-            document.getElementById("status_box").append(dd);
-            dt = document.createElement("dt");
-            dd = document.createElement("dd");
-            dt.innerText = "Model state";
-            dd.innerText = "Not available";
-            document.getElementById("status_box").append(dt);
-            document.getElementById("status_box").append(dd);
-
-            document.getElementById("cam_view").src = "/static/no-image.jpg"
-        }
+        fillDescriptionList(currentStatus);
+        document.getElementById("cam_view").src = "/api/v1/frame?" + Date.now();
     };
     xhr.ontimeout = (e) => {
         document.getElementById("status_headline").innerText = "offline"
-        document.getElementById("status_box").innerHTML = "";
+        fillDescriptionList({});
         document.getElementById("cam_view").src = "/static/no-image.jpg"
     };
     xhr.onerror = (e) => {
         document.getElementById("status_headline").innerText = "offline"
-        document.getElementById("status_box").innerHTML = "";
+        fillDescriptionList({});
         document.getElementById("cam_view").src = "/static/no-image.jpg"
     };
     xhr.timeout = 3000;

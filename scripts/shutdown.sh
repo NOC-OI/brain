@@ -7,5 +7,5 @@ if [ "$EUID" -ne 0 ]
 fi
 source .env
 export INTERNAL_SERVICE_SECRET
-curl -H "Authorization: Bearer $INTERNAL_SERVICE_SECRET" -X GET http://localhost:8082/destroy > /dev/null 2>&1
+curl --max-time 5 -H "Authorization: Bearer $INTERNAL_SERVICE_SECRET" -X GET http://localhost:8082/destroy > /dev/null 2>&1
 docker compose down
