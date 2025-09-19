@@ -167,7 +167,13 @@ def api_set_vision_model():
 @base_api.route("/api/v1/log_detections", methods=['POST'])
 def api_log_detections():
     detections = request.get_json()
+
+    log_dir = os.path.join(current_app.config["UPLOAD_FOLDER"], "logs")
+    os.makedirs(log_dir, exist_ok=True)
     print("Got detections object", flush=True)
+    dts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    with open(os.path.join(current_app.config['UPLOAD_FOLDER'], "logs", "detections_" + dts + ".json"), "w") as file:
+        file.write(json.dumps(detections))
     return {"status": "ok"}
 
 @base_api.route("/api/v1/models/<filename>", methods=['GET'])
