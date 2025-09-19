@@ -32,7 +32,7 @@ if jwt_secret is None:
     jwt_secret = "deadbeef"
 frontend_globals = {
         "brand": os.environ.get("MANAGEMENT_PANEL_BRANDING", "undefined"),
-        "version_string": "v0.0/2025-09-15"
+        "version_string": "v1.0/2025-09-19"
     }
 
 def check_password(username, password):
